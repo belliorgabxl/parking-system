@@ -105,5 +105,3 @@ src/
   lib/                     db, models, engine (state machine), ledger, pricing, seed/bots, session, client helpers
   components/              UI kit, AppProvider, VoiceInput
 ```
-#   p a r k i n g - s y s t e m  
- 
