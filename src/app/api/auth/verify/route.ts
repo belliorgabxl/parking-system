@@ -12,7 +12,7 @@ import {
   SavedPayment,
   Notification,
 } from "@/lib/models";
-import { hashOtp } from "@/lib/otp";
+import { hashOtp, OTP_BYPASS } from "@/lib/otp";
 import { MINUTE, rateLimit } from "@/lib/ratelimit";
 import { getOrCreateUser, startSession } from "@/lib/session";
 
@@ -29,7 +29,9 @@ export const POST = handler(async (req: Request) => {
   // Per-session attempts plus a per-phone cap across sessions (brute force with many guest sessions).
   if (guest.otpAttempts >= MAX_ATTEMPTS) throw new ApiError(429, "OTP_LOCKED", "Too many attempts. Request a new code.");
   await rateLimit(`otp-verify:${guest.otpPhone}`, 10, 10 * MINUTE, "Too many attempts for this number. Try again later.");
-  if (hashOtp(code, String(guest._id)) !== guest.otpCode) {
+  if (!/^d{6}$/.test(code)) throw new ApiError(400, "OTP_WRONG", "Enter the 6-digit code.");
+  // Test mode (no SMS provider yet): any 6 digits pass. Never active in a real production deployment.
+  if (!OTP_BYPASS && hashOtp(code, String(guest._id)) !== guest.otpCode) {
     guest.otpAttempts += 1;
     await guest.save();
     throw new ApiError(400, "OTP_WRONG", "That code isn't right. Try again.");

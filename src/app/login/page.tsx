@@ -16,7 +16,6 @@ function Login() {
   const [step, setStep] = useState<"phone" | "code" | "name">("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
-  const [devCode, setDevCode] = useState<string | null>(null);
   const [otpTimes, setOtpTimes] = useState<{ expiresAt: string; resendAt: string; serverNow: string } | null>(null);
   const expiresIn = useCountdown(otpTimes?.expiresAt, otpTimes?.serverNow);
   const resendIn = useCountdown(otpTimes?.resendAt, otpTimes?.serverNow);
@@ -41,10 +40,9 @@ function Login() {
 
   const requestCode = () =>
     run(async () => {
-      const r = await api<{ devCode?: string; expiresAt: string; resendAt: string; serverNow: string }>("/api/auth/otp", {
+      const r = await api<{ expiresAt: string; resendAt: string; serverNow: string }>("/api/auth/otp", {
         body: { phone: `+66${digits.replace(/^0/, "")}` },
       });
-      setDevCode(r.devCode ?? null);
       setOtpTimes({ expiresAt: r.expiresAt, resendAt: r.resendAt, serverNow: r.serverNow });
       setCode("");
       setStep("code");
@@ -131,11 +129,6 @@ function Login() {
               }}
             />
           </div>
-          {devCode && (
-            <div className="banner info">
-              Demo mode (no SMS provider): your code is&nbsp;<b className="mono">{devCode}</b>
-            </div>
-          )}
           {err && <div className="banner error">{err}</div>}
           <p className="small muted">
             {expiresIn > 0 ? (

@@ -16,3 +16,10 @@ export const SIMULATION_ON = DEV_TOOLS && process.env.PARKSWAP_SIMULATION !== "o
 
 /** Show OTP codes on screen (no SMS provider yet). */
 export const OTP_ECHO = DEV_TOOLS;
+
+/**
+ * No SMS provider yet: accept ANY 6-digit code. Only in `npm run dev` or DEMO_MODE (where withdrawals
+ * are disabled) — in a real production deployment this is always off, because it would let anyone
+ * log into any account by phone number. Set OTP_BYPASS=off to test real codes locally.
+ */
+export const OTP_BYPASS = DEV_TOOLS && process.env.OTP_BYPASS !== "off";

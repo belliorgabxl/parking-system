@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash } from "crypto";
-export { OTP_ECHO } from "./flags";
+export { OTP_BYPASS, OTP_ECHO } from "./flags";
 
 /** OTPs are stored hashed and bound to the session that requested them. */
 export function hashOtp(code: string, userId: string) {
