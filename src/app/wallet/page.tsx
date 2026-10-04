@@ -161,7 +161,7 @@ export default function WalletPage() {
                           {t.external && ` · paid by ${t.method === "qr" ? "QR" : "card"}`}
                         </span>
                       </div>
-                      <span className={`mono ${t.external ? "faint" : t.amount < 0 ? "" : "green"}`} className="font-bold">
+                      <span className={`mono font-bold ${t.external ? "faint" : t.amount < 0 ? "" : "green"}`}>
                         {baht(t.amount, { sign: true })}
                       </span>
                     </>
