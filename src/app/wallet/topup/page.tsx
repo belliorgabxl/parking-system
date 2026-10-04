@@ -54,7 +54,7 @@ function TopUp() {
     card && "paymentMethodId" in card
       ? (me?.payments.find((p) => p.id === card.paymentMethodId)?.label ?? "Card")
       : card
-        ? `Card •••• ${card.card.cardNumber.replace(/D/g, "").slice(-4)}`
+        ? `Card •••• ${card.card.cardNumber.replace(/\D/g, "").slice(-4)}`
         : "Card";
 
   if (done) {

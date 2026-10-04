@@ -21,7 +21,7 @@ const METHOD_KEY = "ps_pay_method";
 function cardLabelOf(card: CardChoice, saved: { id: string; label: string }[]) {
   if (!card) return "Card";
   if ("paymentMethodId" in card) return saved.find((p) => p.id === card.paymentMethodId)?.label ?? "Card";
-  const n = card.card.cardNumber.replace(/D/g, "");
+  const n = card.card.cardNumber.replace(/\D/g, "");
   const brand = /^4/.test(n) ? "Visa" : /^(5[1-5]|2[2-7])/.test(n) ? "Mastercard" : /^3[47]/.test(n) ? "Amex" : /^35/.test(n) ? "JCB" : "Card";
   return `${brand} •••• ${n.slice(-4)}`;
 }
