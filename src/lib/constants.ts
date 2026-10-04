@@ -35,7 +35,7 @@ export const TX_TYPES = [
   "compensation", // provider share of a seeker penalty
   "refund",
   "penalty",
-  "adjustment", // dev/demo credit
+  "adjustment", // manual credit by ops
 ] as const;
 export type TxType = (typeof TX_TYPES)[number];
 

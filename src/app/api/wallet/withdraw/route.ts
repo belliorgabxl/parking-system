@@ -17,7 +17,7 @@ const norm = (s: string) =>
 export const POST = handler(async (req: Request) => {
   const body = await readJson(req);
   const user = await getOrCreateUser();
-  if (DEMO_MODE) throw new ApiError(403, "DEMO_MODE", "Withdrawals are disabled in this demo — all money here is pretend.");
+  if (DEMO_MODE) throw new ApiError(403, "DEMO_MODE", "Withdrawals are temporarily unavailable. Please try again later.");
   // Withdrawing to cash requires a verified (phone OTP) account — spec §7.
   if (user.isGuest) throw new ApiError(401, "LOGIN_REQUIRED", "Please log in to withdraw.");
   if (user.isBanned) throw new ApiError(403, "ACCOUNT_SUSPENDED", "Your account is suspended. Please contact support.");

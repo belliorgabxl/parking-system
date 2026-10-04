@@ -3,8 +3,8 @@ import "server-only";
 export const IS_PROD = process.env.NODE_ENV === "production";
 
 /**
- * Demo deployments (class presentation, staging): simulation bots and on-screen OTP are allowed
- * even in a production build — but withdrawals are disabled because all money is fake.
+ * Presentation / staging deployments: simulation bots and the OTP shortcut are allowed even in a
+ * production build — but withdrawals are disabled because no real money moves.
  */
 export const DEMO_MODE = process.env.DEMO_MODE === "on";
 

@@ -5,67 +5,25 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, ClientError, errorMessage } from "@/lib/client";
 import type { PaymentMethod } from "@/lib/constants";
-import { baht, mmss } from "@/lib/format";
-import { useCountdown, usePoll } from "@/lib/hooks";
+import { baht } from "@/lib/format";
+import { usePoll } from "@/lib/hooks";
 import type { SpotDetail } from "@/lib/types";
 import { useApp } from "@/components/AppProvider";
 import { CardPicker, type CardChoice } from "@/components/CardPicker";
-import { ErrorScreen, LoadingScreen, Option, Sheet, Spinner, TopBar } from "@/components/ui";
+import { ErrorScreen, LoadingScreen, Option, Spinner, TopBar } from "@/components/ui";
 import { IconCard, IconQr, IconWallet } from "@/components/Icons";
-import { FakeQr } from "@/components/FakeQr";
+import { PaymentSheet } from "@/components/PaymentSheet";
 import { VoiceInput } from "@/components/VoiceInput";
 
 const METHOD_KEY = "ps_pay_method";
 
-/** QR sheet: the spot is reserved for this seeker until `heldUntil`; closing releases it. */
-function QrSheet({
-  id,
-  price,
-  heldUntil,
-  serverNow,
-  busy,
-  onPaid,
-  onClose,
-}: {
-  id: string;
-  price: number;
-  heldUntil: string;
-  serverNow?: string;
-  busy: boolean;
-  onPaid: () => void;
-  onClose: () => void;
-}) {
-  const left = useCountdown(heldUntil, serverNow);
-  const expired = left <= 0;
-  return (
-    <Sheet onClose={busy ? undefined : onClose}>
-      <h3 className="h-section center">Scan with any banking app</h3>
-      {expired ? (
-        <div className="banner warn">This QR code expired and the spot was released. Close and try again.</div>
-      ) : (
-        <>
-          <FakeQr seed={`${id}-${price}-${heldUntil}`} />
-          <p className="center">
-            <span className="big-amount text-[28px]">{baht(price)}</span>
-            <br />
-            <span className="small muted">PromptPay · ParkSwap Co., Ltd.</span>
-          </p>
-          <p className="center small">
-            Spot reserved for you · <b className="mono">{mmss(left)}</b>
-          </p>
-        </>
-      )}
-      <button className="btn btn-dark" onClick={expired ? onClose : onPaid} disabled={busy}>
-        {busy ? <Spinner /> : expired ? "Close" : "I've paid"}
-      </button>
-      {!expired && (
-        <button className="btn btn-ghost" onClick={onClose} disabled={busy}>
-          Cancel
-        </button>
-      )}
-      <p className="small faint center">Demo: no real payment is taken.</p>
-    </Sheet>
-  );
+/** Label shown while charging a card: the saved card's label, or brand + last 4 of a new one. */
+function cardLabelOf(card: CardChoice, saved: { id: string; label: string }[]) {
+  if (!card) return "Card";
+  if ("paymentMethodId" in card) return saved.find((p) => p.id === card.paymentMethodId)?.label ?? "Card";
+  const n = card.card.cardNumber.replace(/D/g, "");
+  const brand = /^4/.test(n) ? "Visa" : /^(5[1-5]|2[2-7])/.test(n) ? "Mastercard" : /^3[47]/.test(n) ? "Amex" : /^35/.test(n) ? "JCB" : "Card";
+  return `${brand} •••• ${n.slice(-4)}`;
 }
 
 export default function PayPage() {
@@ -139,32 +97,33 @@ export default function PayPage() {
     setErr(errorMessage(e));
   };
 
-  const grab = async () => {
+  /** Records the payment and books the spot. */
+  const grabRequest = () =>
+    api(`/api/listings/${id}/grab`, {
+      body: { paymentMethod: method, vehicle: carText, ...(method === "card" ? card : {}) },
+    }).then(() => undefined);
+
+  const finish = async () => {
+    holdRef.current = false;
+    try {
+      sessionStorage.removeItem(METHOD_KEY);
+    } catch {}
+    await refreshMe();
+    router.replace(`/trip/${id}`);
+  };
+
+  const pay = async () => {
     if (!method) return;
     setBusy(true);
     setErr(null);
     try {
-      await api(`/api/listings/${id}/grab`, {
-        body: { paymentMethod: method, vehicle: carText, ...(method === "card" ? card : {}) },
-      });
-      holdRef.current = false;
-      try {
-        sessionStorage.removeItem(METHOD_KEY);
-      } catch {}
-      await refreshMe();
-      router.replace(`/trip/${id}`);
-    } catch (e) {
-      setHeldUntil(null);
-      fail(e);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const openQr = async () => {
-    setBusy(true);
-    setErr(null);
-    try {
+      if (method === "wallet") {
+        // Wallet balance is internal — no bank step.
+        await grabRequest();
+        await finish();
+        return;
+      }
+      // QR / card: reserve the spot while the bank confirms the payment.
       const r = await api<{ result: { heldUntil: string } }>(`/api/listings/${id}/hold`, { body: {} });
       holdRef.current = true;
       setHeldUntil(r.result.heldUntil);
@@ -175,7 +134,7 @@ export default function PayPage() {
     }
   };
 
-  const closeQr = () => {
+  const cancelPayment = () => {
     setHeldUntil(null);
     holdRef.current = false;
     api(`/api/listings/${id}/release`, { body: {} }).catch(() => {});
@@ -274,7 +233,7 @@ export default function PayPage() {
           </span>
           <strong className="mono">{baht(s.price)}</strong>
         </div>
-        <button className="btn btn-yellow" disabled={!ready || busy} onClick={method === "qr" ? openQr : grab}>
+        <button className="btn btn-yellow" disabled={!ready || busy} onClick={pay}>
           {busy && !heldUntil ? (
             <Spinner />
           ) : carText.length < 2 ? (
@@ -289,15 +248,22 @@ export default function PayPage() {
         </button>
       </div>
 
-      {heldUntil && (
-        <QrSheet
-          id={id}
-          price={s.price}
-          heldUntil={heldUntil}
+      {heldUntil && (method === "qr" || method === "card") && (
+        <PaymentSheet
+          method={method}
+          amount={s.price}
+          cardLabel={cardLabelOf(card, me.payments)}
+          qrSeed={`${id}-${s.price}-${heldUntil}`}
+          expiresAt={heldUntil}
           serverNow={data.serverNow}
-          busy={busy}
-          onPaid={grab}
-          onClose={closeQr}
+          expiresNote="Spot reserved for you ·"
+          charge={grabRequest}
+          onSuccess={finish}
+          onError={(e) => {
+            cancelPayment();
+            fail(e);
+          }}
+          onCancel={cancelPayment}
         />
       )}
     </div>

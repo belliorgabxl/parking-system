@@ -137,7 +137,6 @@ export function CardPicker({ onChange }: { onChange: (c: CardChoice) => void }) 
               <input type="checkbox" checked={card.save} onChange={(e) => edit({ save: e.target.checked })} /> Save this card
             </label>
           )}
-          <span className="small faint">Demo: use 4242 4242 4242 4242, any future date, any CVC.</span>
         </div>
       )}
     </div>

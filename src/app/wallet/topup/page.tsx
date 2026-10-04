@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { api, errorMessage } from "@/lib/client";
 import { MAX_TOPUP, MIN_TOPUP } from "@/lib/constants";
-import { baht, mmss } from "@/lib/format";
-import { useCountdown } from "@/lib/hooks";
+import { baht } from "@/lib/format";
 import { CardPicker, type CardChoice } from "@/components/CardPicker";
 import { useApp } from "@/components/AppProvider";
 import { AmountPicker } from "@/components/AmountPicker";
-import { FakeQr } from "@/components/FakeQr";
-import { LoadingScreen, Option, Sheet, Spinner, SuccessHero, TopBar } from "@/components/ui";
+import { PaymentSheet } from "@/components/PaymentSheet";
+import { LoadingScreen, Option, Spinner, SuccessHero, TopBar } from "@/components/ui";
 import { IconCard, IconQr } from "@/components/Icons";
 
 function TopUp() {
@@ -23,37 +22,40 @@ function TopUp() {
   const [amount, setAmount] = useState(initial);
   const [custom, setCustom] = useState<string | null>([100, 300, 500, 1000].includes(initial) ? null : String(initial));
   const [method, setMethod] = useState<"qr" | "card" | null>(null);
-  const [qr, setQr] = useState<string | null>(null); // QR expiry (ISO)
+  const [paying, setPaying] = useState<{ expiresAt: string } | null>(null);
   const [card, setCard] = useState<CardChoice>(null);
-  const qrLeft = useCountdown(qr);
-  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState<{ balance: number } | null>(null);
 
   const value = custom !== null ? Number(custom || 0) : amount;
   const invalid = value < MIN_TOPUP ? `Minimum ${baht(MIN_TOPUP)}` : value > MAX_TOPUP ? `Maximum ${baht(MAX_TOPUP)}` : null;
 
-  const pay = async () => {
-    setBusy(true);
-    setErr(null);
-    try {
-      const r = await api<{ balance: number }>("/api/wallet/topup", {
-        body: { amount: value, method, ...(method === "card" ? card : {}) },
-      });
-      setQr(null);
-      await refreshMe();
-      // Returning to payment: go straight back so the seeker can finish grabbing the spot.
-      if (next) {
-        router.replace(next);
-        return;
-      }
-      setDone(r);
-    } catch (e) {
-      setErr(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
+  const result = useRef<{ balance: number } | null>(null);
+
+  /** Records the top-up once the bank has confirmed. */
+  const charge = async () => {
+    result.current = await api<{ balance: number }>("/api/wallet/topup", {
+      body: { amount: value, method, ...(method === "card" ? card : {}) },
+    });
   };
+
+  const finish = async () => {
+    setPaying(null);
+    await refreshMe();
+    // Returning to payment: go straight back so the seeker can finish grabbing the spot.
+    if (next) {
+      router.replace(next);
+      return;
+    }
+    setDone(result.current);
+  };
+
+  const cardLabel =
+    card && "paymentMethodId" in card
+      ? (me?.payments.find((p) => p.id === card.paymentMethodId)?.label ?? "Card")
+      : card
+        ? `Card •••• ${card.card.cardNumber.replace(/D/g, "").slice(-4)}`
+        : "Card";
 
   if (done) {
     return (
@@ -125,10 +127,13 @@ function TopUp() {
       <div className="footer">
         <button
           className="btn btn-yellow"
-          disabled={!method || !!invalid || busy || (method === "card" && !card)}
-          onClick={() => (method === "qr" ? setQr(new Date(Date.now() + 5 * 60_000).toISOString()) : pay())}
+          disabled={!method || !!invalid || !!paying || (method === "card" && !card)}
+          onClick={() => {
+            setErr(null);
+            setPaying({ expiresAt: new Date(Date.now() + 5 * 60_000).toISOString() });
+          }}
         >
-          {busy ? (
+          {paying ? (
             <Spinner />
           ) : !method ? (
             "Choose a payment method"
@@ -139,30 +144,21 @@ function TopUp() {
           )}
         </button>
       </div>
-      {qr && (
-        <Sheet onClose={() => !busy && setQr(null)}>
-          <h3 className="h-section center">Scan with any banking app</h3>
-          {qrLeft > 0 ? (
-            <>
-              <FakeQr seed={`topup-${value}-${qr}`} />
-              <p className="center big-amount text-[28px]">{baht(value)}</p>
-              <p className="center small muted">
-                Code expires in <b className="mono">{mmss(qrLeft)}</b>
-              </p>
-              <button className="btn btn-dark" onClick={pay} disabled={busy}>
-                {busy ? <Spinner /> : "I've paid"}
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="banner warn">This QR code expired.</div>
-              <button className="btn btn-dark" onClick={() => setQr(new Date(Date.now() + 5 * 60_000).toISOString())}>
-                Get a new code
-              </button>
-            </>
-          )}
-          <p className="small faint center">Demo: no real payment is taken.</p>
-        </Sheet>
+      {paying && method && (
+        <PaymentSheet
+          method={method}
+          amount={value}
+          cardLabel={cardLabel}
+          qrSeed={`topup-${value}-${paying.expiresAt}`}
+          expiresAt={method === "qr" ? paying.expiresAt : null}
+          charge={charge}
+          onSuccess={finish}
+          onError={(e) => {
+            setPaying(null);
+            setErr(errorMessage(e));
+          }}
+          onCancel={() => setPaying(null)}
+        />
       )}
     </div>
   );

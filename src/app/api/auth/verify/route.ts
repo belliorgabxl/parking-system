@@ -30,7 +30,7 @@ export const POST = handler(async (req: Request) => {
   if (guest.otpAttempts >= MAX_ATTEMPTS) throw new ApiError(429, "OTP_LOCKED", "Too many attempts. Request a new code.");
   await rateLimit(`otp-verify:${guest.otpPhone}`, 10, 10 * MINUTE, "Too many attempts for this number. Try again later.");
   if (!/^d{6}$/.test(code)) throw new ApiError(400, "OTP_WRONG", "Enter the 6-digit code.");
-  // Test mode (no SMS provider yet): any 6 digits pass. Never active in a real production deployment.
+  // No SMS provider yet: any 6 digits pass (see OTP_BYPASS). Never active in a real production deployment.
   if (!OTP_BYPASS && hashOtp(code, String(guest._id)) !== guest.otpCode) {
     guest.otpAttempts += 1;
     await guest.save();

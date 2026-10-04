@@ -30,7 +30,7 @@ export function cardBrand(num: string) {
 }
 
 /**
- * Validates a card entered in the app. Mock tokenisation: we keep brand + last 4 only — a real PSP
+ * Validates a card entered in the app. We keep brand + last 4 only — once a PSP is connected
  * (Omise.js / 2C2P SDK) would tokenise in the browser so the full number never reaches our server.
  */
 export function validateCard(body: Record<string, unknown>) {

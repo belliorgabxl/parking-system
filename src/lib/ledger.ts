@@ -7,7 +7,7 @@ type Id = Types.ObjectId | string;
 
 /**
  * Two buckets inside one wallet:
- *  - credit: top-ups, demo credit and refunds of card/QR payments — spendable on parking, NOT withdrawable
+ *  - credit: top-ups, manual credit and refunds of card/QR payments — spendable on parking, NOT withdrawable
  *    (blocks cashing out stolen cards through refunds);
  *  - cash: provider earnings and compensation — withdrawable.
  * Spending (wallet payments, penalties) uses credit first, then cash.

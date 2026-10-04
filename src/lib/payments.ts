@@ -2,7 +2,8 @@ import "server-only";
 import { randomBytes } from "crypto";
 
 /**
- * Payment gateway adapter. MVP: mock gateway that always succeeds.
+ * Payment gateway adapter. No PSP is connected yet: nothing is charged and every payment succeeds
+ * (the app shows a 5-second bank confirmation, see components/PaymentSheet.tsx).
  * Swap in a real PSP (e.g. Omise / 2C2P / GB Prime Pay for PromptPay QR + cards) here;
  * QR payments would become async (create charge → webhook confirms → credit ledger).
  */

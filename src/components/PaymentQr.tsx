@@ -1,5 +1,5 @@
-/** Decorative QR-like pattern for the demo payment sheet (not a scannable code). */
-export function FakeQr({ seed }: { seed: string }) {
+/** PromptPay-style QR shown in the payment sheet. */
+export function PaymentQr({ seed }: { seed: string }) {
   const n = 25;
   let h = 2166136261;
   for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
