@@ -66,20 +66,18 @@ export default function WalletPage() {
         {error && <div className="banner error">{error.message}</div>}
         {data && (
           <>
-            <div className="card dark col gap-1.5 p-5">
+            <div className="card dark col gap-1.5 p-5" >
               <span className="muted">Total balance</span>
-              <span className="mono text-[40px] font-[750] tracking-[-0.03em]">{baht(data.balance)}</span>
+              <span className="mono text-[40px] font-[750] tracking-[-0.03em]" >
+                {baht(data.balance)}
+              </span>
               {data.balance > 0 && (
                 <span className="small muted">
                   {baht(data.withdrawable)} withdrawable · {baht(Math.max(0, data.balance - data.withdrawable))} parking credit
                 </span>
               )}
-              {data.heldInEscrow > 0 && (
-                <span className="small muted">{baht(data.heldInEscrow)} held for your current parking</span>
-              )}
-              {data.balance < 0 && (
-                <span className="small text-[#fca5a5]">Top up to settle penalties before your next handover.</span>
-              )}
+              {data.heldInEscrow > 0 && <span className="small muted">{baht(data.heldInEscrow)} held for your current parking</span>}
+              {data.balance < 0 && <span className="small text-[#fca5a5]" >Top up to settle penalties before your next handover.</span>}
             </div>
             <div className="row">
               <Link href="/wallet/topup" className="btn btn-yellow">
@@ -90,12 +88,9 @@ export default function WalletPage() {
               </Link>
             </div>
             {data.isGuest && (
-              <div className="banner info grid gap-2">
+              <div className="grid gap-2 bg-white px-4 py-4 rounded-md shadow text-gray-500">
                 <span className="grow">You&apos;re using a guest wallet on this device. Log in to keep it and withdraw.</span>
-                <Link
-                  href="/login?next=/wallet"
-                  className="w-full rounded-md border bg-amber-300 py-2.5 text-center font-semibold text-black"
-                >
+                <Link href="/login?next=/wallet" className="w-full text-center py-1 border-none bg-blue-500 text-white rounded-md">
                   Log in
                 </Link>
               </div>
@@ -104,20 +99,22 @@ export default function WalletPage() {
             {data.withdrawals.length > 0 && (
               <>
                 <h2 className="h-section">Withdrawals</h2>
-                <div className="card pt-0 pb-0">
+                <div className="card pt-0 pb-0" >
                   <div className="list">
                     {data.withdrawals.map((w) => {
                       const [label, tone] = W_STATUS[w.status] ?? [w.status, "soft"];
                       return (
                         <div key={w.id} className="list-item">
-                          <div className="col grow gap-0.5">
+                          <div className="grow col gap-0.5" >
                             <span className="font-semibold">
                               {w.destination} {w.account}
                             </span>
                             <span className="small faint">{relDay(w.createdAt)}</span>
                           </div>
-                          <div className="col items-end gap-1">
-                            <span className="mono font-bold">{baht(w.amount)}</span>
+                          <div className="col items-end gap-1" >
+                            <span className="mono font-bold" >
+                              {baht(w.amount)}
+                            </span>
                             <span className={`badge ${tone}`}>{label}</span>
                           </div>
                           {w.status === "pending" && (
@@ -134,7 +131,9 @@ export default function WalletPage() {
             )}
 
             <div className="row between">
-              <h2 className="h-section mt-0">Recent activity</h2>
+              <h2 className="h-section mt-0" >
+                Recent activity
+              </h2>
             </div>
             <div className="tabs" role="tablist">
               {(
@@ -149,20 +148,20 @@ export default function WalletPage() {
                 </button>
               ))}
             </div>
-            <div className="card pt-1 pb-1">
+            <div className="card pt-1 pb-1" >
               <div className="list">
                 {txs.length === 0 && <p className="muted small py-3.5">No activity yet.</p>}
                 {txs.map((t) => {
                   const row = (
                     <>
-                      <div className="col grow gap-0.5">
+                      <div className="grow col gap-0.5" >
                         <span className="font-semibold">{t.label}</span>
                         <span className="small faint">
                           {relDay(t.createdAt)}
                           {t.external && ` · paid by ${t.method === "qr" ? "QR" : "card"}`}
                         </span>
                       </div>
-                      <span className={`mono font-bold ${t.external ? "faint" : t.amount < 0 ? "" : "green"}`}>
+                      <span className={`mono ${t.external ? "faint" : t.amount < 0 ? "" : "green"}`} className="font-bold">
                         {baht(t.amount, { sign: true })}
                       </span>
                     </>
@@ -191,7 +190,7 @@ export default function WalletPage() {
           danger
           onConfirm={cancelWithdrawal}
           onClose={() => setCancelling(null)}
-        />
+ />
       )}
     </div>
   );
